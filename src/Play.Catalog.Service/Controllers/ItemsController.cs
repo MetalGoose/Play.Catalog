@@ -27,9 +27,13 @@ namespace Play.Catalog.Service.Controllers
 
         // GET /itmes/{id}
         [HttpGet("{id}")]
-        public ItemDto GetById(Guid id)
+        public ActionResult<ItemDto> GetById(Guid id)
         {
-            return items.FirstOrDefault(x => x.Id == id);
+            var item = items.FirstOrDefault(x => x.Id == id);
+
+            if (item is null) return NotFound();
+
+            return item;
         }
 
         // POST /items
@@ -54,7 +58,7 @@ namespace Play.Catalog.Service.Controllers
         {
             var existingItem = items.FirstOrDefault(x => x.Id == id);
 
-            if (existingItem is null) return NoContent();
+            if (existingItem is null) return NotFound();
 
             var updatedItem = existingItem with
             {
@@ -77,9 +81,10 @@ namespace Play.Catalog.Service.Controllers
             if (index != -1)
             {
                 items.RemoveAt(index);
+                return NoContent();
             }
 
-            return NoContent();
+            return NotFound();
         }
     }
 }
