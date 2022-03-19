@@ -7,11 +7,17 @@ using Microsoft.OpenApi.Models;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver;
+using Play.Catalog.Service.Repositories;
+using Play.Catalog.Service.Settings;
 
 namespace Play.Catalog.Service
 {
+
     public class Startup
     {
+        private ServiceSettings _serviceSettings;
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -25,7 +31,22 @@ namespace Play.Catalog.Service
             BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
             BsonSerializer.RegisterSerializer(new DateTimeOffsetSerializer(BsonType.String));
 
-            // forbid to remove the async suffix from the methods when compiling
+            #region DI registration
+
+            _serviceSettings = Configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
+
+            services.AddSingleton(serviceProvider =>
+            {
+                var mongoDbSettings = Configuration.GetSection(nameof(MongoDbSettings)).Get<MongoDbSettings>();
+                var mongoClient = new MongoClient(mongoDbSettings.ConnectionString);
+                return mongoClient.GetDatabase(_serviceSettings.ServiceName);
+            });
+
+            services.AddSingleton<IItemsRepository, ItemsRepository>();
+
+            #endregion DI registration
+
+            // forbid to remove the async suffix from the methods when compiling (for correct use of nameof(someMethodAsync))
             services.AddControllers(options =>
             {
                 options.SuppressAsyncSuffixInActionNames = false;
