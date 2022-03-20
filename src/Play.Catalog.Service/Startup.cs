@@ -4,13 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Serializers;
-using MongoDB.Driver;
 using Play.Catalog.Service.Entities;
-using Play.Catalog.Service.Repositories;
-using Play.Catalog.Service.Settings;
+using Play.Common.MongoDb;
+using Play.Common.Settings;
 
 namespace Play.Catalog.Service
 {
@@ -29,27 +25,11 @@ namespace Play.Catalog.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
-            BsonSerializer.RegisterSerializer(new DateTimeOffsetSerializer(BsonType.String));
-
-            #region DI registration
 
             _serviceSettings = Configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
 
-            services.AddSingleton(serviceProvider =>
-            {
-                var mongoDbSettings = Configuration.GetSection(nameof(MongoDbSettings)).Get<MongoDbSettings>();
-                var mongoClient = new MongoClient(mongoDbSettings.ConnectionString);
-                return mongoClient.GetDatabase(_serviceSettings.ServiceName);
-            });
-
-            services.AddSingleton<IRepository<Item>>(serviceProvider =>
-            {
-                var database = serviceProvider.GetService<IMongoDatabase>();
-                return new MongoRepository<Item>(database, "items");
-            });
-
-            #endregion DI registration
+            services.AddMongo()
+                    .AddMongoRepository<Item>("items");
 
             // forbid to remove the async suffix from the methods when compiling (for correct use of nameof(someMethodAsync))
             services.AddControllers(options =>
